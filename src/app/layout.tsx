@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Snaplet API",
-  description: "Backend routes only",
+  title: "Nimble",
+  description: "Nimble learning platform",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
