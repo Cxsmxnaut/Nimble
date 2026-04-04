@@ -14,6 +14,7 @@ import { evaluateAnswer } from "@/lib/domain/evaluation";
 import { extractTextFromUpload } from "@/lib/domain/extraction";
 import { generateQuestionPairs, generateStudyTitle } from "@/lib/domain/generation";
 import { buildSessionQueue, pickRevisitOffset } from "@/lib/domain/queue";
+import { semanticCheckAnswer, semanticPassesThreshold } from "@/lib/server/semantic-check";
 import { createId, mutateUserBucket, readUserBucket } from "@/lib/server/store";
 
 function nowIso(): string {
@@ -561,7 +562,7 @@ export async function createQuestionForSource(
     throw new Error("Question prompt and answer are required");
   }
 
-  return mutateUserBucket(userId, (bucket) => {
+  return mutateUserBucket(userId, async (bucket) => {
     const source = bucket.sources[sourceId];
     if (!source) {
       throw new Error("Source not found");
@@ -591,7 +592,7 @@ export async function updateQuestion(
   questionId: string,
   updates: { prompt?: string; answer?: string },
 ): Promise<Question> {
-  return mutateUserBucket(userId, (bucket) => {
+  return mutateUserBucket(userId, async (bucket) => {
     const question = bucket.questions[questionId];
     if (!question) {
       throw new Error("Question not found");
@@ -1051,7 +1052,7 @@ export async function submitAttempt(
   sessionEnded: boolean;
   nextQuestion: Omit<SessionQuestion, "answer"> | null;
 }> {
-  return mutateUserBucket(userId, (bucket) => {
+  return mutateUserBucket(userId, async (bucket) => {
     const session = bucket.sessions[sessionId];
     if (!session) {
       throw new Error("Session not found");
@@ -1068,6 +1069,14 @@ export async function submitAttempt(
 
     const question = getQuestionById(bucket, payload.questionId);
     const evaluation = evaluateAnswer(payload.answer, question.answer);
+    const semanticResult = evaluation.outcome === "incorrect"
+      ? await semanticCheckAnswer({
+          prompt: question.prompt,
+          canonicalAnswer: question.answer,
+          userAnswer: payload.answer,
+        })
+      : null;
+    const semanticMatch = semanticPassesThreshold(semanticResult);
 
     const isRetry = Boolean(payload.isRetry);
     if (isRetry && session.pendingRetryQuestionId !== question.id) {
@@ -1104,9 +1113,9 @@ export async function submitAttempt(
       };
     }
 
-    let finalOutcome: AttemptOutcome = evaluation.outcome;
+    let finalOutcome: AttemptOutcome = semanticMatch ? "exact" : evaluation.outcome;
     if (isRetry) {
-      finalOutcome = evaluation.outcome === "exact" || evaluation.outcome === "accent_near"
+      finalOutcome = evaluation.outcome === "exact" || evaluation.outcome === "accent_near" || semanticMatch
         ? "correct_after_retry"
         : "incorrect";
       session.pendingRetryQuestionId = undefined;
@@ -1149,11 +1158,14 @@ export async function submitAttempt(
       correct_after_retry: "Correct after retry.",
       incorrect: "Incorrect. You will see this again soon.",
     };
+    const feedback = semanticMatch
+      ? (isRetry ? "Correct after retry (semantic match)." : "Correct (semantic match).")
+      : feedbackByOutcome[finalOutcome];
 
     return {
       needsRetry: false,
       outcome: finalOutcome,
-      feedback: feedbackByOutcome[finalOutcome],
+      feedback,
       correctAnswer: question.answer,
       sessionEnded: ended,
       nextQuestion: toClientQuestion(next),

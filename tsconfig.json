@@ -32,6 +32,7 @@
   ],
   "exclude": [
     "node_modules",
+    "frontend",
     "nimble (2)",
     "Duolingo",
     "nimble",
