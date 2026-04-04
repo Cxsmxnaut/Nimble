@@ -1,19 +1,34 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Button } from '../components/Button';
 import { CheckCircle, Zap, Brain, MousePointer2, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export const LandingPage = ({ onGetStarted }: { onGetStarted: () => void }) => {
+  const [previewAnswer, setPreviewAnswer] = useState('');
+  const [previewResult, setPreviewResult] = useState<null | 'correct' | 'incorrect'>(null);
+
+  const evaluatePreviewAnswer = () => {
+    const normalized = previewAnswer.trim().toLowerCase().replace(/[.!?,]/g, '');
+    const accepted = new Set([
+      '7',
+      'seven',
+      'there are 7',
+      'there are seven',
+      'it is 7',
+      'it is seven',
+      'a rainbow has 7 colors',
+      'a rainbow has seven colors',
+    ]);
+
+    setPreviewResult(accepted.has(normalized) ? 'correct' : 'incorrect');
+  };
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 bg-background/60 backdrop-blur-md flex justify-between items-center px-4 sm:px-6 lg:px-8 h-20 border-b border-outline-variant/5">
-        <div className="flex items-center gap-4 sm:gap-8 min-w-0">
+        <div className="flex items-center gap-4 min-w-0">
           <span className="text-2xl font-black text-primary tracking-tighter font-headline">Nimble</span>
-          <div className="hidden md:flex gap-6">
-            <a href="#" className="text-primary font-bold border-b-2 border-primary px-1">Methodology</a>
-            <a href="#" className="text-on-surface-variant hover:text-on-surface transition-colors">Pricing</a>
-            <a href="#" className="text-on-surface-variant hover:text-on-surface transition-colors">About</a>
-          </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <button onClick={onGetStarted} className="hidden sm:inline text-on-surface-variant font-bold hover:text-on-surface transition-colors">Sign In</button>
@@ -40,7 +55,6 @@ export const LandingPage = ({ onGetStarted }: { onGetStarted: () => void }) => {
             </p>
             <div className="flex flex-wrap gap-4">
               <Button size="lg" onClick={onGetStarted}>Get Started</Button>
-              <Button variant="outline" size="lg" onClick={onGetStarted}>Continue as Guest</Button>
             </div>
           </motion.div>
 
@@ -64,9 +78,30 @@ export const LandingPage = ({ onGetStarted }: { onGetStarted: () => void }) => {
               <div className="space-y-4">
                 <div className="bg-surface-container-high p-4 rounded-lg border border-outline-variant/10">
                   <p className="text-sm text-primary mb-2 font-bold uppercase tracking-tighter">Question 14</p>
-                  <p className="text-on-surface font-medium mb-4">What is the primary function of the Golgi apparatus in a eukaryotic cell?</p>
-                  <div className="bg-surface-container-low p-3 rounded-lg border-2 border-primary/40 text-on-surface italic text-sm">
-                    Modifying, sorting, and packaging proteins...
+                  <p className="text-on-surface font-medium mb-4">How many colors are in a rainbow?</p>
+                  <div className="space-y-3">
+                    <input
+                      value={previewAnswer}
+                      onChange={(e) => setPreviewAnswer(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          evaluatePreviewAnswer();
+                        }
+                      }}
+                      placeholder="Type your answer (try: 7 or seven)"
+                      className="w-full bg-surface-container-low p-3 rounded-lg border border-primary/40 text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    />
+                    <div className="flex items-center gap-3">
+                      <Button size="sm" onClick={evaluatePreviewAnswer} disabled={!previewAnswer.trim()}>
+                        Check Answer
+                      </Button>
+                      {previewResult === 'correct' ? (
+                        <p className="text-secondary text-sm font-semibold">Correct. Nice start.</p>
+                      ) : null}
+                      {previewResult === 'incorrect' ? (
+                        <p className="text-tertiary text-sm font-semibold">Not quite. Try 7 or seven.</p>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -87,19 +122,16 @@ export const LandingPage = ({ onGetStarted }: { onGetStarted: () => void }) => {
               icon={<Zap className="text-primary" />}
               title="AI-Powered Kits"
               description="Turn any material—lecture notes, PDFs, or messy scribbles—into high-quality questions in seconds."
-              image="https://picsum.photos/seed/neural/400/200"
             />
             <FeatureCard 
               icon={<Brain className="text-secondary" />}
               title="Adaptive Learning"
               description="Our algorithm identifies your knowledge gaps and focuses on what you're struggling with most."
-              image="https://picsum.photos/seed/graph/400/200"
             />
             <FeatureCard 
               icon={<MousePointer2 className="text-tertiary" />}
               title="Active Recall"
               description="Master everything through typed answers and smart validation that understands context, not just keywords."
-              image="https://picsum.photos/seed/keyboard/400/200"
             />
           </div>
         </section>
@@ -136,15 +168,12 @@ export const LandingPage = ({ onGetStarted }: { onGetStarted: () => void }) => {
   );
 };
 
-const FeatureCard = ({ icon, title, description, image }: any) => (
+const FeatureCard = ({ icon, title, description }: any) => (
   <div className="group bg-surface-container-low p-8 rounded-2xl border border-outline-variant/10 hover:bg-surface-container transition-all hover:scale-[1.02] deep-bloom">
     <div className="w-14 h-14 bg-surface-container-high rounded-xl flex items-center justify-center mb-6">
       {icon}
     </div>
     <h3 className="text-2xl font-headline font-bold mb-4">{title}</h3>
-    <p className="text-on-surface-variant leading-relaxed mb-6">{description}</p>
-    <div className="h-32 rounded-xl overflow-hidden relative">
-      <img src={image} alt={title} className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" referrerPolicy="no-referrer" />
-    </div>
+    <p className="text-on-surface-variant leading-relaxed">{description}</p>
   </div>
 );
