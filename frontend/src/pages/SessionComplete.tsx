@@ -6,8 +6,7 @@ import {
   ArrowLeft, 
   RefreshCw, 
   Play, 
-  Lightbulb,
-  Trophy
+  Lightbulb
 } from 'lucide-react';
 import { SessionResult } from '../types';
 
@@ -19,13 +18,25 @@ interface SessionCompleteProps {
 }
 
 export const SessionComplete = ({ result, onBack, onRetry, onNew }: SessionCompleteProps) => {
+  const attempts = result.correctCount + result.incorrectCount;
+  const velocityDelta = Math.max(0, Math.min(30, Math.round((result.accuracy - 73) * 0.7)));
+  const weakCount = result.weakQuestions.length;
+
+  const insight = weakCount > 0
+    ? `You missed ${weakCount} item${weakCount === 1 ? '' : 's'} in this session. Run a short focused retry to lock these in.`
+    : 'No weak items detected. Start a new session to keep momentum and expand coverage.';
+
   return (
-    <div className="max-w-5xl mx-auto space-y-12">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-5xl mx-auto space-y-12"
+    >
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <span className="inline-block px-3 py-1 bg-secondary/10 text-secondary text-xs font-bold rounded-full mb-4 tracking-widest uppercase">Success</span>
           <h1 className="text-4xl md:text-6xl font-black text-on-surface tracking-tighter">Session Complete</h1>
-          <p className="text-on-surface-variant mt-2 text-lg">You've reached your daily velocity milestone.</p>
+          <p className="text-on-surface-variant mt-2 text-lg">You reached today&apos;s review milestone.</p>
         </div>
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="w-4 h-4" />
@@ -52,7 +63,9 @@ export const SessionComplete = ({ result, onBack, onRetry, onNew }: SessionCompl
               </svg>
               <span className="absolute text-3xl font-black text-on-surface">{result.accuracy}%</span>
             </div>
-            <p className="mt-4 text-on-surface-variant text-sm">Velocity was 12% higher than your average.</p>
+            <p className="mt-4 text-on-surface-variant text-sm">
+              Velocity was {velocityDelta}% higher than your baseline.
+            </p>
           </div>
         </div>
 
@@ -68,6 +81,14 @@ export const SessionComplete = ({ result, onBack, onRetry, onNew }: SessionCompl
             <h3 className="text-5xl font-black text-on-surface">{result.incorrectCount}</h3>
             <p className="text-on-surface-variant font-bold text-sm uppercase tracking-tight">Incorrect Answers</p>
           </div>
+          <div className="col-span-2 pt-4 border-t border-outline-variant/20">
+            <p className="text-xs font-bold tracking-widest uppercase text-on-surface-variant">
+              Session Summary
+            </p>
+            <p className="text-on-surface-variant mt-1 text-sm">
+              {attempts} total responses • Duration: {result.duration}
+            </p>
+          </div>
         </div>
 
         {/* Weak Items */}
@@ -80,28 +101,35 @@ export const SessionComplete = ({ result, onBack, onRetry, onNew }: SessionCompl
             <span className="text-xs font-bold text-on-surface-variant/50">{result.weakQuestions.length} ITEMS REQUIRING FOCUS</span>
           </div>
           
-          {result.weakQuestions.map((item, i) => (
-            <div key={i} className="bg-surface-container-low hover:bg-surface-container transition-all p-6 rounded-2xl border border-outline-variant/5">
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-tertiary/10 flex-shrink-0 flex items-center justify-center">
-                  <span className="text-tertiary font-bold">{i + 1}</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-on-surface font-semibold mb-3">{item.question}</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-3 bg-surface-container-lowest rounded-xl text-xs border border-error/20">
-                      <span className="block text-error font-bold uppercase mb-1">Your Answer</span>
-                      {item.userAnswer}
-                    </div>
-                    <div className="p-3 bg-secondary/5 rounded-xl text-xs border border-secondary/20">
-                      <span className="block text-secondary font-bold uppercase mb-1">Correct Answer</span>
-                      {item.correctAnswer}
+          {weakCount === 0 ? (
+            <div className="bg-surface-container-low p-6 rounded-2xl border border-outline-variant/5">
+              <p className="text-on-surface font-semibold">No weak questions in this run.</p>
+              <p className="text-on-surface-variant text-sm mt-1">Start another session to keep the streak.</p>
+            </div>
+          ) : (
+            result.weakQuestions.map((item, i) => (
+              <div key={i} className="bg-surface-container-low hover:bg-surface-container transition-all p-6 rounded-2xl border border-outline-variant/5">
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-full bg-tertiary/10 flex-shrink-0 flex items-center justify-center">
+                    <span className="text-tertiary font-bold">{i + 1}</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-on-surface font-semibold mb-3">{item.question}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="p-3 bg-surface-container-lowest rounded-xl text-xs border border-error/20">
+                        <span className="block text-error font-bold uppercase mb-1">Your Answer</span>
+                        {item.userAnswer}
+                      </div>
+                      <div className="p-3 bg-secondary/5 rounded-xl text-xs border border-secondary/20">
+                        <span className="block text-secondary font-bold uppercase mb-1">Correct Answer</span>
+                        {item.correctAnswer}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Actions */}
@@ -120,7 +148,7 @@ export const SessionComplete = ({ result, onBack, onRetry, onNew }: SessionCompl
             </div>
             <div className="mt-8 pt-8 border-t border-outline-variant/10">
               <p className="text-sm text-on-surface-variant italic leading-relaxed">
-                "Repetition is the mother of learning, the father of action, which makes it the architect of accomplishment."
+                Repetition turns weak recall into automatic recall.
               </p>
             </div>
             <div className="mt-8 p-4 bg-tertiary/10 rounded-xl border border-tertiary/20">
@@ -128,13 +156,13 @@ export const SessionComplete = ({ result, onBack, onRetry, onNew }: SessionCompl
                 <Lightbulb className="text-tertiary w-5 h-5" />
                 <div>
                   <h4 className="text-tertiary font-bold text-sm">Flow Insight</h4>
-                  <p className="text-xs text-on-surface-variant mt-1">You struggle most with historical dates. We recommend a focused 10-minute session later today.</p>
+                  <p className="text-xs text-on-surface-variant mt-1">{insight}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
