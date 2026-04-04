@@ -1,0 +1,6 @@
+/* Intentionally minimal after UI removal. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
